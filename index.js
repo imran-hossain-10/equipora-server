@@ -27,9 +27,21 @@ const stripTrailingSlash = (url) => url.replace(/\/+$/, "");
 const AUTH_BASE_URL = stripTrailingSlash(
   process.env.BETTER_AUTH_URL || `http://localhost:${PORT}`
 );
-const CLIENT_URL = stripTrailingSlash(
-  process.env.CLIENT_URL || "http://localhost:3000"
-);
+const CLIENT_URLS = [
+  ...new Set(
+    [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+      "https://equipora-client-alpha.vercel.app",
+      "https://equipora-client.vercel.app",
+      ...(process.env.CLIENT_URLS || process.env.CLIENT_URL || "")
+        .split(","),
+    ]
+      .map((url) => stripTrailingSlash(url.trim()))
+      .filter(Boolean)
+  ),
+];
+const CLIENT_URL = CLIENT_URLS[0];
 
 for (const key of ["MONGODB_URI", "BETTER_AUTH_SECRET", "STRIPE_SECRET_KEY"]) {
   if (!process.env[key]) {
@@ -361,7 +373,14 @@ const handleSuccessfulCheckout = async (session) => {
 
 app.use(
   cors({
-    origin: CLIENT_URL,
+    origin: (origin, callback) => {
+      if (!origin || CLIENT_URLS.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin is not allowed by CORS: ${origin}`));
+    },
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
@@ -425,7 +444,7 @@ const connectDB = async () => {
     secret: process.env.BETTER_AUTH_SECRET,
     baseURL: AUTH_BASE_URL,
     basePath: "/api/auth",
-    trustedOrigins: [CLIENT_URL],
+    trustedOrigins: CLIENT_URLS,
 
     emailAndPassword: {
       enabled: true,

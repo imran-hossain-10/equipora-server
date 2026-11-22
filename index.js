@@ -78,6 +78,8 @@ const isValidObjectId = (id) =>
 
 const toObjectId = (id) => new ObjectId(id);
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const isValidImageUrl = (value) =>
   typeof value === "string" && /^https?:\/\/\S+$/i.test(value);
 
@@ -674,17 +676,24 @@ app.get("/api/equipments", async (req, res) => {
     const filter = { status: "approved" };
 
     if (typeof search === "string" && search.trim()) {
-      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const escaped = escapeRegex(search.trim());
       const searchRegex = new RegExp(escaped, "i");
 
       filter.$or = [{ name: searchRegex }, { description: searchRegex }];
     }
 
     if (typeof category === "string" && category.trim()) {
-      filter.category = { $regex: `^${category.trim()}$`, $options: "i" };
+      filter.category = {
+        $regex: `^${escapeRegex(category.trim())}$`,
+        $options: "i",
+      };
     }
 
     if (typeof rentalType === "string" && rentalType.trim()) {
+      if (!RENTAL_TYPES.includes(rentalType)) {
+        return fail(res, 400, "Invalid rental type.");
+      }
+
       filter.rentalType = rentalType;
     }
 

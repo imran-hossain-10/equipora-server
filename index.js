@@ -769,15 +769,30 @@ app.get(
   verifyOwner,
   async (req, res) => {
     try {
-      const equipments = await db
-        .collection("equipments")
-        .find({ ownerId: req.user.id })
-        .sort({ createdAt: -1 })
-        .toArray();
+      const pagination = parsePagination(req.query);
+
+      if (pagination.error) {
+        return fail(res, 400, pagination.error);
+      }
+
+      const filter = { ownerId: req.user.id };
+      const [equipments, total] = await Promise.all([
+        db
+          .collection("equipments")
+          .find(filter)
+          .sort({ createdAt: -1 })
+          .skip(pagination.skip)
+          .limit(pagination.limit)
+          .toArray(),
+        db.collection("equipments").countDocuments(filter),
+      ]);
 
       return res.status(200).json({
         success: true,
-        total: equipments.length,
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        pages: Math.ceil(total / pagination.limit),
         data: equipments,
       });
     } catch (error) {

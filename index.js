@@ -547,6 +547,16 @@ app.get("/", (req, res) => {
   });
 });
 
+app.get("/health", async (req, res) => {
+  try {
+    await db.command({ ping: 1 });
+    return res.status(200).json({ success: true, status: "ok" });
+  } catch (error) {
+    console.error("Health check failed:", error.message);
+    return res.status(503).json({ success: false, status: "unavailable" });
+  }
+});
+
 app.all("/api/auth/{*any}", (req, res) => toNodeHandler(auth)(req, res));
 
 // ============================================

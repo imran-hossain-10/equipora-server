@@ -1412,23 +1412,37 @@ app.patch(
 
 app.get("/api/users", verifyToken, verifyAdmin, async (req, res) => {
   try {
-    const users = await db
-      .collection("user")
-      .find({})
-      .project({
-        name: 1,
-        email: 1,
-        image: 1,
-        role: 1,
-        emailVerified: 1,
-        createdAt: 1,
-      })
-      .sort({ createdAt: -1 })
-      .toArray();
+    const pagination = parsePagination(req.query);
+
+    if (pagination.error) {
+      return fail(res, 400, pagination.error);
+    }
+
+    const [users, total] = await Promise.all([
+      db
+        .collection("user")
+        .find({})
+        .project({
+          name: 1,
+          email: 1,
+          image: 1,
+          role: 1,
+          emailVerified: 1,
+          createdAt: 1,
+        })
+        .sort({ createdAt: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.limit)
+        .toArray(),
+      db.collection("user").countDocuments(),
+    ]);
 
     return res.status(200).json({
       success: true,
-      total: users.length,
+      total,
+      page: pagination.page,
+      limit: pagination.limit,
+      pages: Math.ceil(total / pagination.limit),
       data: users,
     });
   } catch (error) {
@@ -1494,15 +1508,29 @@ app.patch("/api/users/:id/role", verifyToken, verifyAdmin, async (req, res) => {
 // All equipment, including pending and rejected
 app.get("/api/admin/equipments", verifyToken, verifyAdmin, async (req, res) => {
   try {
-    const equipments = await db
-      .collection("equipments")
-      .find({})
-      .sort({ createdAt: -1 })
-      .toArray();
+    const pagination = parsePagination(req.query);
+
+    if (pagination.error) {
+      return fail(res, 400, pagination.error);
+    }
+
+    const [equipments, total] = await Promise.all([
+      db
+        .collection("equipments")
+        .find({})
+        .sort({ createdAt: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.limit)
+        .toArray(),
+      db.collection("equipments").countDocuments(),
+    ]);
 
     return res.status(200).json({
       success: true,
-      total: equipments.length,
+      total,
+      page: pagination.page,
+      limit: pagination.limit,
+      pages: Math.ceil(total / pagination.limit),
       data: equipments,
     });
   } catch (error) {
@@ -1592,15 +1620,29 @@ app.delete(
 
 app.get("/api/bookings/admin/all", verifyToken, verifyAdmin, async (req, res) => {
   try {
-    const bookings = await db
-      .collection("bookings")
-      .find({})
-      .sort({ createdAt: -1 })
-      .toArray();
+    const pagination = parsePagination(req.query);
+
+    if (pagination.error) {
+      return fail(res, 400, pagination.error);
+    }
+
+    const [bookings, total] = await Promise.all([
+      db
+        .collection("bookings")
+        .find({})
+        .sort({ createdAt: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.limit)
+        .toArray(),
+      db.collection("bookings").countDocuments(),
+    ]);
 
     return res.status(200).json({
       success: true,
-      total: bookings.length,
+      total,
+      page: pagination.page,
+      limit: pagination.limit,
+      pages: Math.ceil(total / pagination.limit),
       data: bookings.map(formatBooking),
     });
   } catch (error) {

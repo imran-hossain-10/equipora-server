@@ -1188,15 +1188,30 @@ app.get(
   verifyCustomer,
   async (req, res) => {
     try {
-      const bookings = await db
-        .collection("bookings")
-        .find({ customerId: req.user.id })
-        .sort({ createdAt: -1 })
-        .toArray();
+      const pagination = parsePagination(req.query);
+
+      if (pagination.error) {
+        return fail(res, 400, pagination.error);
+      }
+
+      const filter = { customerId: req.user.id };
+      const [bookings, total] = await Promise.all([
+        db
+          .collection("bookings")
+          .find(filter)
+          .sort({ createdAt: -1 })
+          .skip(pagination.skip)
+          .limit(pagination.limit)
+          .toArray(),
+        db.collection("bookings").countDocuments(filter),
+      ]);
 
       return res.status(200).json({
         success: true,
-        total: bookings.length,
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        pages: Math.ceil(total / pagination.limit),
         data: bookings,
       });
     } catch (error) {

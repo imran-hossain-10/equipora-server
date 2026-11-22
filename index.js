@@ -47,6 +47,7 @@ const JWKS = createRemoteJWKSet(new URL(`${AUTH_BASE_URL}/api/auth/jwks`));
 
 let db;
 let auth;
+let httpServer;
 
 // ============================================
 // HELPERS
@@ -1867,7 +1868,7 @@ const startServer = async () => {
     await createPaymentIndexes();
     await fixUnpaidApprovedBookings();
 
-    app.listen(PORT, () => {
+    httpServer = app.listen(PORT, () => {
       console.log(`Equipora Server running on port ${PORT}`);
       console.log(`JWT JWKS URL: ${AUTH_BASE_URL}/api/auth/jwks`);
     });
@@ -1876,5 +1877,26 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+const shutdown = async (signal) => {
+  console.log(`${signal} received. Closing Equipora Server...`);
+
+  try {
+    if (httpServer) {
+      await new Promise((resolve, reject) => {
+        httpServer.close((error) => (error ? reject(error) : resolve()));
+      });
+    }
+
+    await mongoClient.close();
+    process.exit(0);
+  } catch (error) {
+    console.error("Server shutdown error:", error);
+    process.exit(1);
+  }
+};
+
+process.once("SIGINT", () => shutdown("SIGINT"));
+process.once("SIGTERM", () => shutdown("SIGTERM"));
 
 startServer();

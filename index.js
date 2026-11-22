@@ -665,6 +665,12 @@ app.get("/api/equipments", async (req, res) => {
       sort = "recent",
     } = req.query;
 
+    const pagination = parsePagination(req.query);
+
+    if (pagination.error) {
+      return fail(res, 400, pagination.error);
+    }
+
     const filter = { status: "approved" };
 
     if (typeof search === "string" && search.trim()) {
@@ -722,15 +728,23 @@ app.get("/api/equipments", async (req, res) => {
       "price-high": { price: -1 },
     };
 
-    const equipments = await db
-      .collection("equipments")
-      .find(filter)
-      .sort(sortOptions[sort] || sortOptions.recent)
-      .toArray();
+    const [equipments, total] = await Promise.all([
+      db
+        .collection("equipments")
+        .find(filter)
+        .sort(sortOptions[sort] || sortOptions.recent)
+        .skip(pagination.skip)
+        .limit(pagination.limit)
+        .toArray(),
+      db.collection("equipments").countDocuments(filter),
+    ]);
 
     return res.status(200).json({
       success: true,
-      total: equipments.length,
+      total,
+      page: pagination.page,
+      limit: pagination.limit,
+      pages: Math.ceil(total / pagination.limit),
       data: equipments,
     });
   } catch (error) {

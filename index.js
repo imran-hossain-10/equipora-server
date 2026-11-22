@@ -13,8 +13,14 @@ dotenv.config();
 
 
 
-const PORT = process.env.PORT || 5000;
-const DATABASE_NAME = "equipmentrentaldb";
+const configuredPort = Number(process.env.PORT || 5000);
+
+if (!Number.isInteger(configuredPort) || configuredPort < 1 || configuredPort > 65535) {
+  throw new Error("PORT must be an integer between 1 and 65535.");
+}
+
+const PORT = configuredPort;
+const DATABASE_NAME = process.env.MONGODB_DATABASE || "equipmentrentaldb";
 
 const stripTrailingSlash = (url) => url.replace(/\/+$/, "");
 

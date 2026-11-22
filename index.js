@@ -58,6 +58,21 @@ const fail = (res, status, message) =>
 
 const serverError = (res, message) => fail(res, 500, message);
 
+const parsePagination = (query) => {
+  const page = query.page === undefined ? 1 : Number(query.page);
+  const limit = query.limit === undefined ? 20 : Number(query.limit);
+
+  if (!Number.isInteger(page) || page < 1) {
+    return { error: "Page must be a positive integer." };
+  }
+
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    return { error: "Limit must be an integer between 1 and 100." };
+  }
+
+  return { page, limit, skip: (page - 1) * limit };
+};
+
 const isValidObjectId = (id) =>
   typeof id === "string" && /^[0-9a-fA-F]{24}$/.test(id);
 
